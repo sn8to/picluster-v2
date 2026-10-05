@@ -1,0 +1,10 @@
+[connection]
+id=head-node
+type=ethernet
+interface-name=eth0
+
+[ipv4]
+method=auto
+address1=10.0.0.1/24
+dns=127.0.0.1;1.1.1.1;
+dns-search=pi.local;

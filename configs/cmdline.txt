@@ -1,0 +1,1 @@
+root=PARTLABEL=rootfs rootwait rd.shell
