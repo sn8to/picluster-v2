@@ -2,7 +2,7 @@
 
 CONTAINERFILE_NAME="Containerfile"
 OUTPUTFILE_NAME="pi.img"
-TMPDIR=./tmp
+TMPDIR=${TMPDIR:-`mktemp -d`}
 XZ_ENABLE=
 VERBOSE=
 
@@ -60,7 +60,8 @@ done
 
 build_container() {
     echo "=== making temp directory ==="
-    #TMPDIR=`mktemp -d`
+    # TMPDIR=`mktemp -d`
+    # echo $TMPDIR
     _ mkdir -p $TMPDIR
 
     echo "=== building container ==="
@@ -86,7 +87,7 @@ EOF
 write_boot() {
     echo "=== copying boot files ==="
     _ mkdir -p $TMPDIR/bootfs
-    # _ tar -xvf $TMPDIR/container.tar -C $TMPDIR/bootfs boot/efi
+    _ tar -xvf $TMPDIR/container.tar -C $TMPDIR/bootfs boot/efi
     echo "=== writing boot to image ==="
     _ mformat -i ${OUTPUTFILE_NAME}@@2048S -T `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[0].size'` ::
     _ mcopy -vi ${OUTPUTFILE_NAME}@@2048S -s $TMPDIR/bootfs/boot/efi/* ::/
@@ -104,7 +105,7 @@ xz_image() {
 }
 
 main() {
-    # build_container
+    build_container
     if [ ! -f $TMPDIR/container.tar ]; then
         echo "error: container.tar does not exist, did the build fail?"
         exit 1
