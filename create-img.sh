@@ -60,8 +60,6 @@ done
 
 build_container() {
     echo "=== making temp directory ==="
-    # TMPDIR=`mktemp -d`
-    # echo $TMPDIR
     _ mkdir -p $TMPDIR
 
     echo "=== building container ==="
