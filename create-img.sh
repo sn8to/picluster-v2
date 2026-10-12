@@ -63,7 +63,7 @@ build_container() {
     _ mkdir -p $TMPDIR
 
     echo "=== building container ==="
-    _ buildah bud --no-hostname --no-hosts --platform linux/arm64 -f $CONTAINERFILE_NAME -o type=tar,dest=$TMPDIR/container.tar
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f $CONTAINERFILE_NAME -o type=tar,dest=$TMPDIR/container.tar
 }
 
 create_image() {
@@ -118,7 +118,7 @@ main() {
 
 
 
-_check_exists buildah
+_check_exists podman
 _check_exists sfdisk util-linux
 _check_exists mcopy mtools
 _check_exists mkfs.ext4 e2fsprogs
