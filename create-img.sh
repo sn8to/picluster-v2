@@ -77,24 +77,24 @@ create_image() {
 label: gpt
 unit: sectors
 first-lba: 2048
-size=${boot_size}MiB type=uefi, name=bootfs
-size=${root_size}MiB type=linux, name=rootfs
+size=${boot_size}MiB type=uefi, name=picboot
+size=${root_size}MiB type=linux, name=picroot
 EOF
 }
 
 write_boot() {
     echo "=== copying boot files ==="
-    _ mkdir -p $TMPDIR/bootfs
-    _ tar -xvf $TMPDIR/container.tar -C $TMPDIR/bootfs boot/efi
+    _ mkdir -p $TMPDIR/picboot
+    _ tar -xvf $TMPDIR/container.tar -C $TMPDIR/picboot boot/efi
     echo "=== writing boot to image ==="
-    _ mformat -i ${OUTPUTFILE_NAME}@@2048S -v bootfs -T `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[0].size'` ::
-    _ mcopy -vi ${OUTPUTFILE_NAME}@@2048S -s $TMPDIR/bootfs/boot/efi/* ::/
+    _ mformat -i ${OUTPUTFILE_NAME}@@2048S -v picboot -T `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[0].size'` ::
+    _ mcopy -vi ${OUTPUTFILE_NAME}@@2048S -s $TMPDIR/picboot/boot/efi/* ::/
 }
 
 write_root() {
     echo "=== writing root to image ==="
     _ tar --delete -f $TMPDIR/container.tar boot/efi/
-    _ mkfs.ext4 -vE offset=$(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].start'` * 512 )) -L rootfs $OUTPUTFILE_NAME -d $TMPDIR/container.tar $(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].size'` / 2 ))k
+    _ mkfs.ext4 -vE offset=$(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].start'` * 512 )) -L picroot $OUTPUTFILE_NAME -d $TMPDIR/container.tar $(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].size'` / 2 ))k
 }
 
 xz_image() {

@@ -1,1 +1,1 @@
-root=PARTLABEL=rootfs rootwait rd.shell
+root=PARTLABEL=picroot rootwait rd.shell
