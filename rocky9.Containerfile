@@ -32,7 +32,7 @@ RUN echo 'export PDSH_RCMD_DEFAULT=ssh' > /etc/profile.d/pdsh.sh
 COPY configs/cmdline.txt /boot/efi
 
 # copy fstab
-COPY config/fstab /etc
+COPY configs/fstab /etc
 
 # remove dnf cache
 RUN dnf clean all
