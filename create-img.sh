@@ -72,6 +72,11 @@ while getopts ":f:ho:vx" opts; do
     esac
 done
 
+make_base_container() {
+    echo "=== building base container ==="
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f rocky9.Containerfile -t rocky9
+}
+
 build_container() {
     echo "=== making temp directory ==="
     _ mkdir -p $TMPDIR
@@ -117,6 +122,7 @@ xz_image() {
 }
 
 main() {
+    podman image exists rocky9 || make_base_container
     build_container
     if [ ! -f $TMPDIR/container.tar ]; then
         echo "error: container.tar does not exist, did the build fail?"
