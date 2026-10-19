@@ -113,7 +113,11 @@ write_boot() {
 write_root() {
     echo "=== writing root to image ==="
     _ tar --delete -f $TMPDIR/container.tar boot/efi/
-    _ mkfs.ext4 -vE offset=$(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].start'` * 512 )) -L picroot $OUTPUTFILE_NAME -d $TMPDIR/container.tar $(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].size'` / 2 ))k
+    # fix orphan_file flag being unsupported in rocky9
+    if grep orphan_file /etc/mke2fs.conf; then
+        O="-O ^orphan_file"
+    fi
+    _ mkfs.ext4 $O -vE offset=$(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].start'` * 512 )) -L picroot $OUTPUTFILE_NAME -d $TMPDIR/container.tar $(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].size'` / 2 ))k
 }
 
 xz_image() {
