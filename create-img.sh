@@ -122,7 +122,7 @@ xz_image() {
 }
 
 main() {
-    podman image exists rocky9 || make_base_container
+    make_base_container
     build_container
     if [ ! -f $TMPDIR/container.tar ]; then
         echo "error: container.tar does not exist, did the build fail?"
