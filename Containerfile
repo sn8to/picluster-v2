@@ -35,7 +35,7 @@ RUN make all PREFIX=/opt/warewulf
 RUN make install
 
 # clean unnecessary files
-RUN go clean -modcache
+RUN go clean -modcache && go clean -cache
 
 # modify ww conf for ip range
 RUN yq -i '.netmask = "255.255.254.0"' /opt/warewulf/etc/warewulf/warewulf.conf
@@ -52,6 +52,9 @@ RUN yq -i '.dhcp.["systemd name"] = "dnsmasq" | .tftp.["systemd name"] = "dnsmas
 # todo: RUN wwctl overlay import host $BASEDIR/configs/templates/ww4-listen.conf.ww /etc/dnsmasq.d
 
 RUN systemctl enable warewulfd dnsmasq
+
+# reset workdir back to root
+WORKDIR /
 
 #################
 ## setup nodes ##

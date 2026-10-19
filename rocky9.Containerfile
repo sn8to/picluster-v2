@@ -33,6 +33,7 @@ COPY configs/cmdline.txt /boot/efi
 
 # copy fstab
 COPY configs/fstab /etc
+RUN mkdir -p /boot/efi
 
 # remove dnf cache
 RUN dnf clean all
