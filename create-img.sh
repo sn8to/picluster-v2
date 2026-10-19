@@ -24,6 +24,10 @@ _() {
     local cmd="$1"
     shift
     $cmd "$@"
+    if [ $? -ne 0 ]; then
+        echo "*** The previous command failed! ***"
+        exit 1
+    fi
 }
 
 _check_exists() {
