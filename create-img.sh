@@ -27,10 +27,20 @@ _() {
 }
 
 _check_exists() {
-    if ! which $1 > /dev/null; then
-        echo "error: ${2:-$1} is required for this script"
-        exit 1
-    fi
+    case $1 in
+        /*)
+            if [[ ! -e $1 ]]; then
+                echo "error: ${2:-$1} is required for this script"
+                exit 1
+            fi
+            ;;
+        *)
+            if ! which $1 > /dev/null; then
+                echo "error: ${2:-$1} is required for this script"
+                exit 1
+            fi
+            ;;
+    esac
 }
 
 while getopts ":f:ho:vx" opts; do
@@ -123,5 +133,6 @@ _check_exists sfdisk util-linux
 _check_exists mcopy mtools
 _check_exists mkfs.ext4 e2fsprogs
 _check_exists jq
+_check_exists /usr/include/archive.h libarchive
 
 main
