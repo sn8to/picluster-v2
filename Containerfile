@@ -17,6 +17,9 @@ RUN useradd -m -g users -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZ
 # set static ip
 COPY configs/head-node.nmconnection /etc/NetworkManager/system-connections
 
+# set hostname
+RUN echo pi-hpc-head01.pi.local > /etc/hostname
+
 ######################
 ## warewulf install ##
 ######################
