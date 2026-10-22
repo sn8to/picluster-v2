@@ -4,7 +4,7 @@ type=ethernet
 interface-name=eth0
 
 [ipv4]
-method=auto
+method=manual
 address1=10.0.0.1/23
 dns=127.0.0.1;1.1.1.1;
 dns-search=pi.local;
