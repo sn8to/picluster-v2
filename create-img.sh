@@ -1,19 +1,21 @@
 #!/bin/bash
 
-CONTAINERFILE_NAME="Containerfile"
 OUTPUTFILE_NAME="pi.img"
-TMPDIR=${TMPDIR:-`mktemp -d`}
+TMPDIR=${TMPDIR:-./tmp}
 XZ_ENABLE=
 VERBOSE=
 
 usage() {
     cat << EOF
-Usage: $0 [-hvz] [-f containerfile] [-o output.img]
-    -f      specifies which containerfile to build (default: Containerfile)
+Usage: $0 [-hvz] [-o output.img]
     -h      shows this message and exits
     -o      specifies the output image (default: pi.img)
     -v      verbose logging - shows each command that is run in the script
-    -x      compresses the image with xz (will automatically append .xz to the end of the output filename)
+    -x      compresses the image with xz (will automatically append .xz to the
+            end of the output filename)
+
+    You can also use the TMPDIR environment variable to change the directory
+    used to hold staging files for the output image (default is ./tmp)
 EOF
 }
 
@@ -47,11 +49,8 @@ _check_exists() {
     esac
 }
 
-while getopts ":f:ho:vx" opts; do
+while getopts ":ho:vx" opts; do
     case "$opts" in
-        f)
-            CONTAINERFILE_NAME=$OPTARG
-            ;;
         h)
             usage
             exit 0
@@ -74,7 +73,7 @@ done
 
 make_base_container() {
     echo "=== building base container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f rocky9.Containerfile -t rocky9
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/rocky9.Containerfile -t rocky9
 }
 
 build_container() {
@@ -82,7 +81,7 @@ build_container() {
     _ mkdir -p $TMPDIR
 
     echo "=== building container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f $CONTAINERFILE_NAME -o type=tar,dest=$TMPDIR/container.tar
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/head-node.Containerfile -o type=tar,dest=$TMPDIR/container.tar
 }
 
 create_image() {
