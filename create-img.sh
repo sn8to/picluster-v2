@@ -23,9 +23,7 @@ _() {
     if (( VERBOSE )); then
         echo $ "$@"
     fi
-    local cmd="$1"
-    shift
-    $cmd "$@"
+    eval "$@"
     if [ $? -ne 0 ]; then
         echo "*** The previous command failed! ***"
         exit 1
