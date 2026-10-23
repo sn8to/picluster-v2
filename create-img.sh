@@ -76,12 +76,23 @@ make_base_container() {
     _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/rocky9.Containerfile -t rocky9
 }
 
-build_container() {
+make_compute_tar() {
+    echo "=== building compute node container ==="
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/compute-node.Containerfile -t base-rocky9-dracut
+
+    echo "=== writing & compressing compute node tarball ==="
+    _ podman save base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz
+}
+
+build_head_tar() {
     echo "=== making temp directory ==="
     _ mkdir -p $TMPDIR
 
     echo "=== building container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/head-node.Containerfile -o type=tar,dest=$TMPDIR/container.tar
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/head-node.Containerfile -t head-node
+
+    echo "=== writing tarball ==="
+    _ podman save head-node -o $TMPDIR/headnode.tar
 }
 
 create_image() {
@@ -103,7 +114,7 @@ EOF
 write_boot() {
     echo "=== copying boot files ==="
     _ mkdir -p $TMPDIR/picboot
-    _ tar -xvf $TMPDIR/container.tar -C $TMPDIR/picboot boot/efi
+    _ tar -xvf $TMPDIR/headnode.tar -C $TMPDIR/picboot boot/efi
     echo "=== writing boot to image ==="
     _ mformat -i ${OUTPUTFILE_NAME}@@2048S -v picboot -T `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[0].size'` ::
     _ mcopy -vi ${OUTPUTFILE_NAME}@@2048S -s $TMPDIR/picboot/boot/efi/* ::/
@@ -111,12 +122,12 @@ write_boot() {
 
 write_root() {
     echo "=== writing root to image ==="
-    _ tar --delete -f $TMPDIR/container.tar boot/efi/
+    _ tar --delete -f $TMPDIR/headnode.tar boot/efi/
     # fix orphan_file flag being unsupported in rocky9
     if grep orphan_file /etc/mke2fs.conf >/dev/null; then
         O="-O ^orphan_file"
     fi
-    _ mkfs.ext4 $O -vE offset=$(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].start'` * 512 )) -L picroot $OUTPUTFILE_NAME -d $TMPDIR/container.tar $(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].size'` / 2 ))k
+    _ mkfs.ext4 $O -vE offset=$(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].start'` * 512 )) -L picroot $OUTPUTFILE_NAME -d $TMPDIR/headnode.tar $(( `sfdisk --json $OUTPUTFILE_NAME | jq -r '.partitiontable.partitions[1].size'` / 2 ))k
 }
 
 xz_image() {
@@ -126,9 +137,18 @@ xz_image() {
 
 main() {
     make_base_container
-    build_container
-    if [ ! -f $TMPDIR/container.tar ]; then
-        echo "error: container.tar does not exist, did the build fail?"
+    if [ ! -f base-rocky9-dracut.tar.xz ]; then
+        make_compute_tar
+        if [ ! -f base-rocky9-dracut.tar.xz ]; then
+            echo "error: base-rocky9-dracut.tar.xz does not exist, did the build fail?"
+            exit 1
+        fi
+    else
+        echo "** base-rocky9-dracut.tar.xz already exists, no need to rebuild"
+    fi
+    build_head_tar
+    if [ ! -f $TMPDIR/headnode.tar ]; then
+        echo "error: headnode.tar does not exist, did the build fail?"
         exit 1
     fi
     create_image $(( 1024 * 8 ))
