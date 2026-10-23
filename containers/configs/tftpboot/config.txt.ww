@@ -1,0 +1,12 @@
+{{- nobackup }}
+{{- range $node := .AllNodes -}}
+{{- if .Tags.Serial }}
+{{- file (print .Tags.Serial "/config.txt") }}
+{{- $firmware := printf "/%s/%s" .ImageName ( default "efi" .Tags.Firmware ) }}
+usb_max_current_enable=1
+auto_initramfs=1
+arm_boost=1
+dtparam=pciex1_gen=3
+os_prefix={{ $firmware }}/
+{{ end -}}
+{{- end}}

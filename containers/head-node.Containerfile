@@ -50,9 +50,13 @@ RUN yq -i '.paths.ipxesource = "/usr/share/ipxe"' /opt/warewulf/etc/warewulf/war
 RUN echo 'export PATH=$PATH:/opt/warewulf/bin' > /etc/profile.d/warewulf.sh
 RUN sed -i 's/secure_path = /secure_path = \/opt\/warewulf\/bin:/' /etc/sudoers
 
+# add raspi tftpboot files
+COPY configs/tftpboot/*.ww /opt/warewulf/share/warewulf/overlays/host/rootfs/var/lib/tftpboot
+
 # dnsmasq
 RUN yq -i '.dhcp.["systemd name"] = "dnsmasq" | .tftp.["systemd name"] = "dnsmasq"' /opt/warewulf/etc/warewulf/warewulf.conf
 # todo: RUN wwctl overlay import host $BASEDIR/configs/templates/ww4-listen.conf.ww /etc/dnsmasq.d
+RUN echo 'pxe-service=0,"Raspberry Pi Boot"' > /etc/dnsmasq.d/piboot.conf
 
 RUN systemctl enable warewulfd dnsmasq
 
@@ -63,4 +67,37 @@ WORKDIR /
 ## setup nodes ##
 #################
 
-# todo
+# install podman (just for building the compute node image)
+RUN dnf install -y podman
+RUN dnf clean all
+
+# build the rocky9 base image and the compute image
+RUN --mount=type=bind,source=rocky9.Containerfile,target=rocky9.Containerfile \
+    podman build -f rocky9.Containerfile -t rocky9
+RUN --mount=type=bind,source=compute-node.Containerfile,target=compute-node.Containerfile \
+    podman build -f compute-node.Containerfile -t base-rocky9-dracut
+
+# import compute image into warewulf
+RUN podman save base-rocky9-dracut -o oci.tar
+RUN wwctl container import oci.tar base-rocky9-dracut
+RUN rm oci.tar
+
+# configure warewulf for all services
+RUN wwctl configure -a
+
+# profile setup
+RUN wwctl profile set --container base-rocky9-dracut --ipxe dracut --netdev eth0 default --yes
+
+# add nodes
+RUN wwctl node add pi-hpc-compute[01-04] -I 10.0.0.11 --discoverable
+
+# build containers and overlays
+RUN wwctl image build base-rocky9-dracut
+RUN wwctl overlay build
+
+# fix selinux for tftpboot dir
+#RUN restorecon -Rv /var/lib/tftpboot
+
+# clean up podman stuff
+RUN podman system prune -af
+RUN rm -r /root/.cache

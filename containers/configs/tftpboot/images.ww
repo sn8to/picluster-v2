@@ -1,0 +1,7 @@
+{{ nobackup }}
+{{ range $node := $.AllNodes}}
+{{ if .Tags.Serial }}
+{{ file (printf "%s/%s" .Tags.Serial .ImageName) }}
+{{ softlink (printf "/opt/warewulf/var/warewulf/chroots/%s/rootfs/boot" .ImageName) }}
+{{ end }}
+{{ end }}
