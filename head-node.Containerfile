@@ -73,7 +73,7 @@ RUN dnf clean all
 
 # import compute image into warewulf
 RUN mkdir -p /opt/warewulf/var/warewulf/chroots/base-rocky9-dracut/rootfs
-RUN --mount=type=bind,source=../base-rocky9-dracut.tar.xz,target=base-rocky9-dracut.tar.xz \
+RUN --mount=type=bind,source=base-rocky9-dracut.tar.xz,target=base-rocky9-dracut.tar.xz \
     tar xJf base-rocky9-dracut.tar.xz -C /opt/warewulf/var/warewulf/chroots/base-rocky9-dracut/rootfs
 
 # configure warewulf for all services
