@@ -71,16 +71,10 @@ WORKDIR /
 RUN dnf install -y podman
 RUN dnf clean all
 
-# build the rocky9 base image and the compute image
-RUN --mount=type=bind,source=rocky9.Containerfile,target=rocky9.Containerfile \
-    podman build -f rocky9.Containerfile -t rocky9
-RUN --mount=type=bind,source=compute-node.Containerfile,target=compute-node.Containerfile \
-    podman build -f compute-node.Containerfile -t base-rocky9-dracut
-
 # import compute image into warewulf
-RUN podman save base-rocky9-dracut -o oci.tar
-RUN wwctl container import oci.tar base-rocky9-dracut
-RUN rm oci.tar
+RUN mkdir -p /opt/warewulf/var/warewulf/chroots/base-rocky9-dracut/rootfs
+RUN --mount=type=bind,source=../base-rocky9-dracut.tar.xz,target=base-rocky9-dracut.tar.xz \
+    tar xf base-rocky9-dracut.tar.xz -C /opt/warewulf/var/warewulf/chroots/base-rocky9-dracut/rootfs
 
 # configure warewulf for all services
 RUN wwctl configure -a
