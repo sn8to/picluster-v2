@@ -73,12 +73,12 @@ done
 
 make_base_container() {
     echo "=== building base container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/rocky9.Containerfile -t rocky9
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f rocky9.Containerfile -t rocky9
 }
 
 make_compute_tar() {
     echo "=== building compute node container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/compute-node.Containerfile -t base-rocky9-dracut
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f compute-node.Containerfile -t base-rocky9-dracut
 
     echo "=== writing & compressing compute node tarball ==="
     _ podman save base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz
@@ -89,7 +89,7 @@ build_head_tar() {
     _ mkdir -p $TMPDIR
 
     echo "=== building container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f containers/head-node.Containerfile -t head-node
+    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f head-node.Containerfile -t head-node
 
     echo "=== writing tarball ==="
     _ podman save head-node -o $TMPDIR/headnode.tar
