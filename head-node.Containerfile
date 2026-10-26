@@ -15,7 +15,7 @@ RUN useradd -m -g wheel -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZ
 RUN useradd -m -g users -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZDHug1' -s /bin/bash -u 1001 user
 
 # set static ip
-COPY configs/head-node.nmconnection /etc/NetworkManager/system-connections
+COPY --chmod=600 configs/head-node.nmconnection /etc/NetworkManager/system-connections
 
 # set hostname
 RUN echo pi-hpc-head01.pi.local > /etc/hostname
