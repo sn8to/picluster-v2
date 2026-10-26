@@ -79,7 +79,7 @@ make_compute_tar() {
     _ podman build --no-hostname --no-hosts --platform linux/arm64 -f compute-node.Containerfile -t base-rocky9-dracut
 
     echo "=== writing & compressing compute node tarball ==="
-    _ podman save base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz
+    _ podman export base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz
 }
 
 build_head_tar() {
@@ -90,7 +90,7 @@ build_head_tar() {
     _ podman build --no-hostname --no-hosts --platform linux/arm64 -f head-node.Containerfile -t head-node
 
     echo "=== writing tarball ==="
-    _ podman save head-node -o $TMPDIR/headnode.tar
+    _ podman export head-node -o $TMPDIR/headnode.tar
 }
 
 create_image() {
