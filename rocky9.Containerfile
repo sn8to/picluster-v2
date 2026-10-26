@@ -23,7 +23,7 @@ RUN dnf install -y rocky-sbc-utils
 RUN dnf install -y --setopt=install_weak_deps=False kernel-rpi-4k-core kernel-rpi-firmware rpi-firmware-bluez rpi-firmware-nonfree
 
 # system utils
-RUN dnf install -y vim nano openssh-server pdsh pdsh-rcmd-ssh pdsh-mod-genders python3-distutils-extra python3-devel git tar jq yq pigz sudo less
+RUN dnf install -y vim nano openssh-server pdsh pdsh-rcmd-ssh pdsh-mod-genders python3-distutils-extra python3-devel git tar jq yq pigz sudo less bash-completion
 
 # set ssh as default for pdsh
 RUN echo 'export PDSH_RCMD_DEFAULT=ssh' > /etc/profile.d/pdsh.sh
