@@ -77,7 +77,9 @@ RUN --mount=type=bind,source=base-rocky9-dracut.tar.xz,target=base-rocky9-dracut
     tar xJf base-rocky9-dracut.tar.xz -C /opt/warewulf/var/warewulf/chroots/base-rocky9-dracut/rootfs
 
 # configure warewulf for all services
-RUN /opt/warewulf/bin/wwctl configure -a
+RUN ln -s /usr/bin/true /usr/local/bin/systemctl && \
+    /opt/warewulf/bin/wwctl configure -a && \
+    rm /usr/local/bin/systemctl
 
 # profile setup
 RUN /opt/warewulf/bin/wwctl profile set --container base-rocky9-dracut --ipxe dracut --netdev eth0 default --yes || true
