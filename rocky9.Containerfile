@@ -33,7 +33,7 @@ RUN echo 'export PDSH_RCMD_DEFAULT=ssh' > /etc/profile.d/pdsh.sh
 COPY configs/cmdline.txt /boot/efi/
 
 # copy /etc files
-COPY configs/{fstab,hosts,genders} /etc/
+COPY configs/fstab configs/hosts configs/genders /etc/
 COPY configs/sudoers-pdsh /etc/sudoers.d/pdsh
 
 # remove dnf cache
