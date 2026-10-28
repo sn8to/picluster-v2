@@ -20,6 +20,7 @@ RUN sed -i -e 's/-o mpol=interleave //' /usr/lib/dracut/modules.d/90wwinit/load-
 # install raspi firmware & boot files
 RUN dnf install -y rocky-release-rpi
 RUN dnf install -y rocky-sbc-utils
+RUN mkdir -p /boot/efi
 RUN dnf install -y --setopt=install_weak_deps=False kernel-rpi-4k-core kernel-rpi-firmware rpi-firmware-bluez rpi-firmware-nonfree
 
 # system utils
@@ -29,11 +30,11 @@ RUN dnf install -y vim nano openssh-server pdsh pdsh-rcmd-ssh pdsh-mod-genders p
 RUN echo 'export PDSH_RCMD_DEFAULT=ssh' > /etc/profile.d/pdsh.sh
 
 # copy cmdline.txt
-COPY configs/cmdline.txt /boot/efi
+COPY configs/cmdline.txt /boot/efi/
 
-# copy fstab
-COPY configs/fstab /etc
-RUN mkdir -p /boot/efi
+# copy /etc files
+COPY configs/{fstab,hosts,genders} /etc/
+COPY configs/sudoers-pdsh /etc/sudoers.d/pdsh
 
 # remove dnf cache
 RUN dnf clean all

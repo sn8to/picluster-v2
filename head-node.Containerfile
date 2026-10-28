@@ -15,7 +15,7 @@ RUN useradd -m -g wheel -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZ
 RUN useradd -m -g users -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZDHug1' -s /bin/bash -u 1001 user
 
 # set static ip
-COPY --chmod=600 configs/head-node.nmconnection /etc/NetworkManager/system-connections
+COPY --chmod=600 configs/head-node.nmconnection /etc/NetworkManager/system-connections/
 
 # set hostname
 RUN echo pi-hpc-head01.pi.local > /etc/hostname
@@ -51,7 +51,7 @@ RUN echo 'export PATH=$PATH:/opt/warewulf/bin' > /etc/profile.d/warewulf.sh
 RUN sed -i 's/secure_path = /secure_path = \/opt\/warewulf\/bin:/' /etc/sudoers
 
 # add raspi tftpboot files
-COPY configs/tftpboot/*.ww /opt/warewulf/share/warewulf/overlays/host/rootfs/var/lib/tftpboot
+COPY configs/tftpboot/*.ww /opt/warewulf/share/warewulf/overlays/host/rootfs/var/lib/tftpboot/
 
 # dnsmasq
 RUN yq -i '.dhcp.["systemd name"] = "dnsmasq" | .tftp.["systemd name"] = "dnsmasq"' /opt/warewulf/etc/warewulf/warewulf.conf

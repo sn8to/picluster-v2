@@ -1,0 +1,2 @@
+# keep pdsh's rcmd mode for sudo pdsh
+Defaults env_keep += PDSH_RCMD_DEFAULT
