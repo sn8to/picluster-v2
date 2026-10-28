@@ -85,9 +85,6 @@ make_compute_tar() {
 }
 
 build_head_tar() {
-    echo "=== making temp directory ==="
-    _ mkdir -p $TMPDIR
-
     echo "=== building container ==="
     _ podman build --no-hostname --no-hosts --platform linux/arm64 -f head-node.Containerfile -t head-node
 
@@ -138,6 +135,9 @@ xz_image() {
 }
 
 main() {
+    echo "=== making temp directory ==="
+    _ mkdir -p $TMPDIR
+
     make_base_container
     if [ ! -f base-rocky9-dracut.tar.xz ]; then
         make_compute_tar
