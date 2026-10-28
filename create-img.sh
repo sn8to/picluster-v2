@@ -80,7 +80,7 @@ make_compute_tar() {
 
     echo "=== writing & compressing compute node tarball ==="
     _ podman create --name temp-base-rocky9-dracut base-rocky9-dracut
-    _ podman export temp-base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz
+    _ "podman export temp-base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz"
     _ podman rm temp-base-rocky9-dracut
 }
 
