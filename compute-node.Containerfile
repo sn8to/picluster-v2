@@ -11,4 +11,5 @@ RUN dnf install -y --downloadonly --downloaddir=/apps/pkgs/slurm-compute slurm-s
 RUN dnf install -y --downloadonly --downloaddir=/apps/pkgs/ipa-client ipa-client
 RUN dnf install -y --downloadonly --downloaddir=/apps/pkgs/glusterfs-client glusterfs-fuse
 
+RUN rm /boot/efi/cmdline.txt
 RUN dracut --verbose --force --no-hostonly --add wwinit --regenerate-all
