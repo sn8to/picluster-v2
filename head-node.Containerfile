@@ -78,7 +78,7 @@ RUN ln -s /usr/bin/true /usr/local/bin/systemctl && \
     rm /usr/local/bin/systemctl
 
 # profile setup
-RUN /opt/warewulf/bin/wwctl profile set --container base-rocky9-dracut --ipxe dracut --netdev eth0 default --yes || true
+RUN /opt/warewulf/bin/wwctl profile set --image base-rocky9-dracut --ipxe dracut --netdev eth0 default --yes || true
 
 # add nodes
 RUN /opt/warewulf/bin/wwctl node add pi-hpc-compute[01-04] -I 10.0.0.11 --discoverable || true
