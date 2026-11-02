@@ -67,10 +67,6 @@ WORKDIR /
 ## setup nodes ##
 #################
 
-# install podman (just for building the compute node image)
-RUN dnf install -y podman
-RUN dnf clean all
-
 # import compute image into warewulf
 RUN mkdir -p /opt/warewulf/var/warewulf/chroots/base-rocky9-dracut/rootfs
 RUN --mount=type=bind,source=base-rocky9-dracut.tar.xz,target=base-rocky9-dracut.tar.xz \
@@ -94,6 +90,5 @@ RUN /opt/warewulf/bin/wwctl overlay build
 # fix selinux for tftpboot dir
 #RUN restorecon -Rv /var/lib/tftpboot
 
-# clean up podman stuff
-RUN podman system prune -af
+# clean up cache
 RUN rm -r /root/.cache
