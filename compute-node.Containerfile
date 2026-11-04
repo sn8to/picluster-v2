@@ -1,4 +1,4 @@
-FROM rocky9
+FROM localhost/rocky9
 
 ######################
 ## offline packages ##

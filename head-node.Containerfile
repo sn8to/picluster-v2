@@ -1,4 +1,4 @@
-FROM rocky9
+FROM localhost/rocky9
 # can't use rocky 10 yet, pdsh isn't available until 10.3, currently we're on 10.2
 
 
