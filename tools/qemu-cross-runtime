@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+"""
+OCI runtime wrapper: transparent cross-architecture container execution
+without binfmt_misc (and therefore without root).
+
+It is passed to `podman build --runtime=` (see create-img.sh). For every
+container `create`/`exec` it inspects the command the runtime is about to
+run; if that binary is for a foreign architecture (currently aarch64 on an
+x86_64 host) and the qemu payload exists in qemu/{bin,lib}, it rewrites the
+throwaway bundle:
+
+  * bind-mounts ./qemu over /mnt inside the container (read-only, exists
+    only for the life of that single RUN -- never an image layer). /mnt is
+    used as the destination because it already exists in every base image,
+    so the runtime never has to create a mountpoint file/dir that would
+    otherwise get committed into the RUN's layer; nothing in this repo's
+    Containerfiles uses /mnt.
+  * prepends the host-arch qemu-execve binary to the command args
+  * sets QEMU_LD_PREFIX (guest sysroot) and QEMU_EXECVE (makes every nested
+    execve inside the guest come back through qemu too, replacing binfmt)
+
+The qemu payload's ELF interpreter is patched (by setup-qemu-execve.sh) to
+/mnt/ld.so, i.e. the host x86_64 loader served straight out of the payload
+mount, so no x86 files ever need to exist inside the arm64 rootfs.
+
+Anything this wrapper does not emulate (native arch, matching arch, binfmt
+already registered elsewhere, unknown binaries) is passed through to the
+real runtime (crun by default) untouched.
+
+Environment:
+  REAL_CRUN            real OCI runtime to exec (default: crun)
+  QEMU_CROSS_PAYLOAD   dir containing bin/ and lib/ (default: <repo>/qemu)
+"""
+
+import json
+import os
+import platform
+import struct
+import subprocess
+import sys
+import time
+
+# ELF e_machine -> payload binary name
+GUESTS = {
+    0xB7: "qemu-execve-aarch64",  # EM_AARCH64
+}
+HOSTS = {
+    "x86_64": 0x3E,   # this host natively runs EM_X86_64
+    "aarch64": 0xB7,
+}
+
+EMULATOR_DEST = "/mnt"
+
+REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PAYLOAD = os.environ.get("QEMU_CROSS_PAYLOAD", os.path.join(REPO_DIR, "qemu"))
+REAL = os.environ.get("REAL_CRUN", "crun")
+
+
+def die(msg):
+    sys.stderr.write("qemu-cross-runtime: %s\n" % msg)
+    sys.exit(1)
+
+
+def elf_machine(path):
+    """Return (e_machine, None) for an ELF file, (None, interp) for a '#!'
+    script, or (None, None) if this is not something we can identify."""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(128)
+    except OSError:
+        return None, None
+    if len(head) >= 20 and head[:4] == b"\x7fELF":
+        big = head[5] == 2  # EI_DATA
+        fmt = ">H" if big else "<H"
+        return struct.unpack(fmt, head[18:20])[0], None
+    if len(head) >= 2 and head[:2] == b"#!":
+        line = head[2:].split(b"\n", 1)[0].decode("utf-8", "replace").split()
+        if not line:
+            return None, None
+        return None, line[0]
+    return None, None
+
+
+DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+
+def resolve_in_root(root, arg0, env=None):
+    """Resolve a program name to a host path inside root, via PATH if it is
+    relative. Returns None if nothing exists."""
+    if arg0.startswith("/"):
+        path = os.path.join(root, arg0.lstrip("/"))
+        if os.path.exists(path):
+            return path
+        return arg0 if os.path.exists(arg0) else None
+    path_env = DEFAULT_PATH
+    for e in env or []:
+        if e.startswith("PATH="):
+            path_env = e[5:]
+            break
+    for d in (path_env.split(":") or DEFAULT_PATH.split(":")):
+        if not d:
+            continue
+        path = os.path.join(root, d.lstrip("/"), arg0)
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def follow_arch(path, root):
+    """Architecture (e_machine) of the file at path, following shebang
+    interpreters, or None if unknown."""
+    seen = 0
+    while seen <= 4 and path:
+        seen += 1
+        mach, interp = elf_machine(path)
+        if mach is not None:
+            return mach
+        if interp is None:
+            return None
+        if os.path.isabs(interp):
+            path = os.path.join(root, interp.lstrip("/"))
+        else:
+            path = os.path.join(root, interp) if path else interp
+    return None
+
+
+def find_bundle(argv):
+    for i, tok in enumerate(argv):
+        if tok in ("--bundle", "-b") and i + 1 < len(argv):
+            return os.path.abspath(argv[i + 1])
+        if tok.startswith("--bundle="):
+            return os.path.abspath(tok.split("=", 1)[1])
+    return os.getcwd()
+
+
+def subcommand(argv):
+    for tok in argv:
+        if tok in ("create", "exec"):
+            return tok
+    return None
+
+
+def emulate_argv(args, root, env=None):
+    """Return rewritten args if we must emulate, else None."""
+    if not args:
+        return None
+    host = HOSTS.get(platform.machine())
+    resolved = resolve_in_root(root, args[0], env)
+    guest = follow_arch(resolved, root)
+    if guest is None or guest == host:
+        return None
+    emu = GUESTS.get(guest)
+    if emu is None:
+        return None
+    payload_bin = os.path.join(PAYLOAD, "bin", emu)
+    if not os.path.exists(payload_bin):
+        die("cannot run %s (foreign-arch) inside %s: qemu payload missing\n"
+            "  run tools/setup-qemu-execve.sh first" % (args[0], root))
+    prog = args[0]
+    if not prog.startswith("/"):
+        # qemu needs a concrete path; give it the container-visible one
+        prog = "/" + os.path.relpath(resolved, root)
+    return [EMULATOR_DEST + "/bin/" + emu, "-L", "/"] + [prog] + args[1:]
+
+
+def patch_config(path, root):
+    with open(path) as f:
+        cfg = json.load(f)
+    proc = cfg.get("process", {})
+    new_args = emulate_argv(proc.get("args", []), root, proc.get("env"))
+    if new_args is None:
+        return
+    proc["args"] = new_args
+    env = proc.get("env", [])
+    env += ["QEMU_LD_PREFIX=/", "QEMU_EXECVE=" + EMULATOR_DEST + "/bin/" +
+            os.path.basename(new_args[0])]
+    proc["env"] = env
+    mounts = cfg.setdefault("mounts", [])
+    if not any(m.get("destination") == EMULATOR_DEST for m in mounts):
+        mounts.append({
+            "destination": EMULATOR_DEST,
+            "type": "bind",
+            "source": PAYLOAD,
+            "options": ["rbind", "ro"],
+        })
+    with open(path, "w") as f:
+        json.dump(cfg, f)
+
+
+def root_from_cfg(cfg_json, bundle):
+    try:
+        with open(cfg_json) as f:
+            root = json.load(f).get("root", {}).get("path", "rootfs")
+    except (OSError, ValueError):
+        return None
+    root = root if os.path.isabs(root) else os.path.join(bundle, root)
+    # podman mounts the rootfs around the same time it invokes the runtime;
+    # wait briefly rather than silently skipping emulation
+    if not os.path.isdir(root):
+        end = time.time() + 3.0
+        while not os.path.isdir(root) and time.time() < end:
+            time.sleep(0.05)
+    return root
+
+
+def main():
+    argv = sys.argv[1:]
+    cmd = subcommand(argv)
+    if cmd == "create":
+        bundle = find_bundle(argv)
+        cfg_json = os.path.join(bundle, "config.json")
+        root = root_from_cfg(cfg_json, bundle)
+        if root:
+            patch_config(cfg_json, root)
+    elif cmd == "exec":
+        bundle = find_bundle(argv)
+        cfg_json = os.path.join(bundle, "config.json")
+        root = root_from_cfg(cfg_json, bundle)
+        proc_json = None
+        for i, tok in enumerate(argv):
+            if tok == "--process" and i + 1 < len(argv):
+                proc_json = argv[i + 1]
+        if root:
+            if proc_json:
+                patch_config(proc_json, root)
+            else:
+                # crun exec ... <id> <cmd...>: rewrite inline command argv
+                try:
+                    id_idx = argv.index("exec")
+                except ValueError:
+                    id_idx = 0
+                i = id_idx + 1
+                while i < len(argv) and argv[i].startswith("-"):
+                    if argv[i] in ("--bundle", "-b", "--process", "--pid-file",
+                                   "--console-socket", "--cwd", "--env",
+                                   "--user", "--process"):
+                        i += 2
+                        continue
+                    i += 1
+                if i < len(argv):
+                    i += 1  # container id
+                    new_args = emulate_argv(argv[i:], root)
+                    if new_args is not None:
+                        argv = argv[:i] + new_args
+    os.execvp(REAL, [REAL] + argv)
+
+
+if __name__ == "__main__":
+    main()

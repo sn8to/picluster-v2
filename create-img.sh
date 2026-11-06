@@ -69,14 +69,23 @@ while getopts ":ho:vx" opts; do
     esac
 done
 
+QEMU_RUNTIME_ARGS=
+setup_emulation() {
+    if [ "$(uname -m)" != aarch64 ] && [ ! -e /proc/sys/fs/binfmt_misc/qemu-aarch64 ]; then
+        echo "=== setting up cross-arch emulation (no binfmt_misc) ==="
+        _ tools/setup-qemu-execve.sh
+        QEMU_RUNTIME_ARGS="--runtime $PWD/tools/qemu-cross-runtime"
+    fi
+}
+
 make_base_container() {
     echo "=== building base container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f rocky9.Containerfile -t rocky9
+    _ podman build $QEMU_RUNTIME_ARGS --no-hostname --no-hosts --platform linux/arm64 -f rocky9.Containerfile -t rocky9
 }
 
 make_compute_tar() {
     echo "=== building compute node container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f compute-node.Containerfile -t base-rocky9-dracut
+    _ podman build $QEMU_RUNTIME_ARGS --no-hostname --no-hosts --platform linux/arm64 -f compute-node.Containerfile -t base-rocky9-dracut
 
     echo "=== writing & compressing compute node tarball ==="
     _ podman create --name temp-base-rocky9-dracut base-rocky9-dracut
@@ -86,7 +95,7 @@ make_compute_tar() {
 
 build_head_tar() {
     echo "=== building container ==="
-    _ podman build --no-hostname --no-hosts --platform linux/arm64 -f head-node.Containerfile -t head-node
+    _ podman build $QEMU_RUNTIME_ARGS --no-hostname --no-hosts --platform linux/arm64 -f head-node.Containerfile -t head-node
 
     echo "=== writing tarball ==="
     _ podman create --name temp-head-node head-node
@@ -138,6 +147,7 @@ main() {
     echo "=== making temp directory ==="
     _ mkdir -p $TMPDIR
 
+    setup_emulation
     make_base_container
     if [ ! -f base-rocky9-dracut.tar.xz ]; then
         make_compute_tar
