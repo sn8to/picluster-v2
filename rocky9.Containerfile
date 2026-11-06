@@ -39,5 +39,9 @@ COPY configs/cmdline.txt /boot/efi/
 COPY configs/fstab configs/hosts configs/genders /etc/
 COPY configs/sudoers-pdsh /etc/sudoers.d/pdsh
 
+# create admin and user
+RUN useradd -m -g wheel -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZDHug1' -s /bin/bash -u 1000 admin
+RUN useradd -m -g users -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZDHug1' -s /bin/bash -u 1001 user
+
 # remove dnf cache
 RUN dnf clean all
