@@ -88,7 +88,7 @@ make_compute_tar() {
     _ podman build $QEMU_RUNTIME_ARGS --no-hostname --no-hosts --platform linux/arm64 -f compute-node.Containerfile -t base-rocky9-dracut
 
     echo "=== writing & compressing compute node tarball ==="
-    _ podman create --name temp-base-rocky9-dracut base-rocky9-dracut
+    _ podman create --name temp-base-rocky9-dracut --replace base-rocky9-dracut
     _ "podman export temp-base-rocky9-dracut | xz -v > base-rocky9-dracut.tar.xz"
     _ podman rm temp-base-rocky9-dracut
 }
@@ -98,7 +98,7 @@ build_head_tar() {
     _ podman build $QEMU_RUNTIME_ARGS --no-hostname --no-hosts --platform linux/arm64 -f head-node.Containerfile -t head-node
 
     echo "=== writing tarball ==="
-    _ podman create --name temp-head-node head-node
+    _ podman create --name temp-head-node --replace head-node
     _ podman export temp-head-node -o $TMPDIR/headnode.tar
     _ podman rm temp-head-node
 }
