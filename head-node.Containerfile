@@ -47,7 +47,7 @@ RUN echo 'export PATH=$PATH:/opt/warewulf/bin' > /etc/profile.d/warewulf.sh
 RUN sed -i 's/secure_path = /secure_path = \/opt\/warewulf\/bin:/' /etc/sudoers
 
 # add raspi tftpboot files
-COPY configs/tftpboot/*.ww /opt/warewulf/share/warewulf/overlays/host/rootfs/var/lib/tftpboot/
+COPY --chmod=755 configs/tftpboot/*.ww /opt/warewulf/share/warewulf/overlays/host/rootfs/var/lib/tftpboot/
 
 # dnsmasq
 RUN yq -i '.dhcp.["systemd name"] = "dnsmasq" | .tftp.["systemd name"] = "dnsmasq"' /opt/warewulf/etc/warewulf/warewulf.conf
