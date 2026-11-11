@@ -24,7 +24,7 @@ RUN sed -i 's/instmods -c/instmods/g' /usr/lib/dracut/modules.d/30ignition/modul
 RUN dnf install -y rocky-release-rpi
 RUN dnf install -y rocky-sbc-utils
 RUN mkdir -p /boot/efi
-RUN dnf install -y kernel-rpi-4k-core kernel-rpi-firmware rpi-firmware-bluez rpi-firmware-nonfree
+RUN dnf install -y kernel-rpi-4k-core kernel-rpi-16k-core kernel-rpi-firmware rpi-firmware-bluez rpi-firmware-nonfree
 
 # system utils
 RUN dnf install -y vim nano openssh-server pdsh pdsh-rcmd-ssh pdsh-mod-genders python3-distutils-extra python3-devel git tar jq yq pigz sudo less bash-completion
@@ -45,3 +45,7 @@ RUN useradd -m -g users -p '$5$cOTJhkxlC4$kEFPIJaKPriv16lcwNBsS4dVMT1sC/a9vFPNlZ
 
 # remove dnf cache
 RUN dnf clean all
+
+# regen initramfs
+RUN dracut --verbose --force --no-hostonly --add wwinit /boot/efi/initramfs8 $(ls -v /boot/config-*.aarch64+4k | tail -n1 | sed 's|/boot/config-||')
+RUN dracut --verbose --force --no-hostonly --add wwinit /boot/efi/initramfs_2712 $(ls -v /boot/config-*.aarch64+16k | tail -n1 | sed 's|/boot/config-||')
